@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมร้อยลูกปัดหรรษา</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f0fdf4; margin: 0; padding: 10px; min-height: 100vh;}
+        
+        .game-container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 20px; }
+        
+        .tabs-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .tab-btn { padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; border: 2px solid transparent; background: #f8fafc; color: #64748b; transition: all 0.2s; }
+        .tab-btn:hover { background: #e2e8f0; }
+        .tab-btn.active { background: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); }
+
+        .game-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media (min-width: 768px) { .game-layout { grid-template-columns: 3fr 2fr; } }
+        
+        .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; background: #e2e8f0; padding: 10px; border-radius: 15px; }
+        .cell { aspect-ratio: 1; background: white; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 2rem; position: relative; }
+        
+        .robot { font-size: 2.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); z-index: 10; position: relative;}
+        .cell.visited { background-color: #bbf7d0; }
+        .cell.error { background-color: #fecaca !important; border: 2px solid #ef4444; }
+
+        .panel { background: #f8fafc; border-radius: 15px; padding: 15px; border: 2px solid #e2e8f0; display: flex; flex-direction: column; gap: 15px;}
+        
+        .palette { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .cmd-btn { background: white; border: 2px solid #cbd5e1; border-radius: 8px; padding: 8px; font-weight: bold; color: #334155; cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center; gap: 5px;}
+        .cmd-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .cmd-btn:active { transform: scale(0.95); }
+
+        .program-list { flex-grow: 1; background: white; border-radius: 10px; border: 2px inset #e2e8f0; padding: 10px; overflow-y: auto; max-height: 400px; }
+        .program-line { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #f1f5f9; font-family: monospace; font-size: 1.1rem; }
+        .program-line:last-child { border-bottom: none; }
+        
+        .program-line.running { background: #fef08a; border-left: 4px solid #eab308; font-weight: bold;}
+        .program-line.error { background: #fecaca; border-left: 4px solid #ef4444; color: #b91c1c; }
+        
+        .del-btn { color: #ef4444; cursor: pointer; font-weight: bold; padding: 0 5px; font-family: sans-serif;}
+        .del-btn:hover { color: #b91c1c; }
+
+        .flowchart-container { display: flex; flex-direction: column; align-items: center; padding: 10px; width: 100%; }
+        .flow-node { background: white; border: 2px solid #333; padding: 8px 16px; min-width: 150px; text-align: center; font-size: 0.9rem; position: relative; z-index: 2; box-shadow: 2px 2px 0px rgba(0,0,0,0.1); font-family: monospace;}
+        .flow-node.start-end { border-radius: 20px; background: #f8fafc; font-family: 'Sarabun', sans-serif;}
+        .flow-node.process { border-radius: 0; background: white; }
+        .flow-node.running { border-color: #eab308; background-color: #fef08a; border-width: 3px; }
+        .flow-node.error { border-color: #ef4444; background-color: #fecaca; border-width: 3px; }
+
+        .flow-arrow { width: 2px; height: 20px; background-color: #333; position: relative; z-index: 1; }
+        .flow-arrow::after { content: ''; position: absolute; bottom: -2px; left: -4px; border-width: 5px 5px 0; border-style: solid; border-color: #333 transparent transparent transparent; }
+        
+        .flow-del-btn { position: absolute; right: -25px; top: 50%; transform: translateY(-50%); color: #ef4444; cursor: pointer; font-weight: bold; font-size: 1.2rem; font-family: sans-serif;}
+
+        .view-toggle { display: flex; background: #e2e8f0; border-radius: 8px; padding: 2px; width: fit-content; margin-bottom: 10px;}
+        .toggle-btn { padding: 4px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; border: none; background: transparent; color: #64748b; font-family: 'Sarabun', sans-serif;}
+        .toggle-btn.active { background: white; color: #1e293b; box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: bold; }
+
+        .manual-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 200px; margin: 0 auto; }
+        .d-pad-btn { background: #3b82f6; color: white; border: none; border-radius: 10px; padding: 15px; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 0 #2563eb; }
+        .d-pad-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #2563eb; }
+        .action-btn { background: #10b981; color: white; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #059669; grid-column: span 3;}
+        .action-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #059669; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 400px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); animation: slideUp 0.3s ease-out;}
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="text-3xl font-bold text-center text-green-700 mb-6">ร้อยลูกปัดหรรษากับมาลี</h1>
+        
+        <div class="tabs-container" id="tabs">
+            <button class="tab-btn active" onclick="switchTab(1)">🎮 เล่นเกม (1.1)</button>
+            <button class="tab-btn" onclick="switchTab(2)">💻 เขียนโค้ด (1.2)</button>
+            <button class="tab-btn" onclick="switchTab(3)">🎨 สร้างอิสระ (2)</button>
+            <button class="tab-btn" onclick="switchTab(4)">🐛 แก้บั๊กต้นกล้า</button>
+        </div>
+
+        <div class="game-layout">
+            <!-- Left Side: Board & Target -->
+            <div>
+                <div class="bg-blue-50 p-4 rounded-xl mb-4 border-2 border-blue-200">
+                    <h3 class="font-bold text-blue-800" id="targetTitle">เป้าหมาย</h3>
+                    <p class="text-sm text-blue-600 mb-2" id="targetDesc">รายละเอียด</p>
+                    <div class="flex items-center gap-2" id="targetPatternContainer">
+                        <!-- Targets rendered here -->
+                    </div>
+                </div>
+
+                <div class="board" id="gameBoard">
+                    <!-- Board generated by JS -->
+                </div>
+                
+                <div class="mt-4 bg-gray-100 p-3 rounded-xl">
+                    <div class="font-bold text-gray-700 text-sm mb-2">กำไลที่ร้อยได้:</div>
+                    <div class="flex items-center gap-2 min-h-[40px] bg-white p-2 rounded-lg border border-gray-200" id="collectedBeads">
+                        <span class="text-gray-400 text-sm italic">ยังไม่มีลูกปัด</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Controls / Code Panel -->
+            <div class="panel" id="panelArea">
+                <!-- Content injected based on active tab -->
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4" id="modalTitle">ผลลัพธ์</h2>
+            <p class="text-gray-600 mb-6" id="modalMessage">รายละเอียด</p>
+            <button onclick="closeModal()" class="bg-blue-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-600 w-full">ตกลง</button>
+        </div>
+    </div>
+
+    <script>
+        const SHAPES = {
+            TRIANGLE: 'triangle',
+            HEXAGON: 'hexagon',
+            CIRCLE: 'circle',
+            PENTAGON: 'pentagon',
+            SQUARE: 'square'
+        };
+
+        const shapeSVGs = {
+            [SHAPES.TRIANGLE]: `<svg viewBox="0 0 100 100" width="30" height="30"><polygon points="50,10 90,90 10,90" fill="#ef4444" stroke="#7f1d1d" stroke-width="3"/></svg>`,
+            [SHAPES.HEXAGON]: `<svg viewBox="0 0 100 100" width="30" height="30"><polygon points="25,10 75,10 95,50 75,90 25,90 5,50" fill="#f59e0b" stroke="#78350f" stroke-width="3"/></svg>`,
+            [SHAPES.CIRCLE]: `<svg viewBox="0 0 100 100" width="30" height="30"><circle cx="50" cy="50" r="40" fill="#3b82f6" stroke="#1e3a8a" stroke-width="3"/></svg>`,
+            [SHAPES.PENTAGON]: `<svg viewBox="0 0 100 100" width="30" height="30"><polygon points="50,10 95,40 75,90 25,90 5,40" fill="#10b981" stroke="#064e3b" stroke-width="3"/></svg>`,
+            [SHAPES.SQUARE]: `<svg viewBox="0 0 100 100" width="30" height="30"><rect x="15" y="15" width="70" height="70" fill="#a855f7" stroke="#4c1d95" stroke-width="3"/></svg>`
+        };
+
+        const mapLayout = [
+            [null, SHAPES.SQUARE, null, SHAPES.CIRCLE, null],
+            [SHAPES.CIRCLE, null, null, null, null],
+            [null, null, SHAPES.PENTAGON, null, SHAPES.TRIANGLE],
+            [SHAPES.HEXAGON, null, null, SHAPES.SQUARE, null],
+            [null, SHAPES.CIRCLE, null, null, null]
+        ];
+
+        const BOARD_SIZE = 5;
+        let startPos = { x: 0, y: 3 }; // หุ่นยนต์เริ่มที่ (0,3) แถว 3 คอลัมน์ 0 (HEXAGON)
+        let currentPos = { ...startPos };
+        let visitedCells = new Set();
+        let collectedSequence = [];
+        let currentTab = 1;
+        let isExecuting = false;
+        
+        let userProgram = [];
+        let executionHalted = false;
+        let currentViewMode = 'pseudo'; // 'pseudo' or 'flowchart'
+
+        const targets = {
+            1: [SHAPES.HEXAGON, SHAPES.CIRCLE, SHAPES.PENTAGON, SHAPES.SQUARE, SHAPES.CIRCLE, SHAPES.TRIANGLE],
+            2: [SHAPES.HEXAGON, SHAPES.CIRCLE, SHAPES.PENTAGON, SHAPES.SQUARE, SHAPES.CIRCLE, SHAPES.TRIANGLE],
+            3: [], // Free mode
+            4: [SHAPES.CIRCLE, SHAPES.PENTAGON, SHAPES.SQUARE, SHAPES.CIRCLE, SHAPES.HEXAGON, SHAPES.HEXAGON] // Tonkla's target (Needs fixing)
+        };
+
+        // Buggy code for Tab 4
+        const tonklaCode = [
+            { type: 'collect', shape: SHAPES.CIRCLE, text: 'ร้อยลูกปัด' },
+            { type: 'move', dir: 'right', text: 'เดินขวา' },
+            { type: 'move', dir: 'right', text: 'เดินขวา' },
+            { type: 'move', dir: 'up', text: 'เดินขึ้น' },
+            { type: 'collect', shape: SHAPES.SQUARE, text: 'ร้อยลูกปัด' }, // Bug 1: Should be Pentagon
+            { type: 'move', dir: 'right', text: 'เดินขวา' },
+            { type: 'move', dir: 'up', text: 'เดินขึ้น' },
+            { type: 'collect', shape: SHAPES.SQUARE, text: 'ร้อยลูกปัด' },
+            { type: 'move', dir: 'left', text: 'เดินซ้าย' },
+            { type: 'move', dir: 'left', text: 'เดินซ้าย' },
+            { type: 'move', dir: 'left', text: 'เดินซ้าย' },
+            { type: 'collect', shape: SHAPES.PENTAGON, text: 'ร้อยลูกปัด' }, // Bug 2: Should be Circle
+            { type: 'move', dir: 'down', text: 'เดินลง' },
+            { type: 'move', dir: 'down', text: 'เดินลง' },
+            { type: 'move', dir: 'down', text: 'เดินลง' },
+            { type: 'collect', shape: SHAPES.HEXAGON, text: 'ร้อยลูกปัด' }
+        ];
+
+        function init() {
+            switchTab(1);
+        }
+
+        function getShapeSVG(shape, small = false) {
+            if (!shape || !shapeSVGs[shape]) return '';
+            if (small) {
+                return shapeSVGs[shape].replace('width="30" height="30"', 'width="20" height="20"');
+            }
+            return shapeSVGs[shape];
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('gameBoard');
+            boardEl.innerHTML = '';
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    
+                    if (visitedCells.has(`${x},${y}`)) {
+                        cell.classList.add('visited');
+                    }
+
+                    if (mapLayout[y][x]) {
+                        cell.innerHTML = getShapeSVG(mapLayout[y][x]);
+                    }
+
+                    if (x === currentPos.x && y === currentPos.y) {
+                        const robot = document.createElement('div');
+                        robot.className = 'robot';
+                        robot.textContent = '🤖';
+                        robot.style.position = 'absolute';
+                        cell.appendChild(robot);
+                    }
+
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function renderTargetPattern() {
+            const container = document.getElementById('targetPatternContainer');
+            container.innerHTML = '';
+            const seq = targets[currentTab];
+            
+            if (currentTab === 3) {
+                for(let i=0; i<5; i++) {
+                    let div = document.createElement('div');
+                    div.className = 'w-8 h-8 rounded-full border-2 border-dashed border-gray-400 flex items-center justify-center bg-gray-50';
+                    container.appendChild(div);
+                }
+            } else {
+                seq.forEach(shape => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-center bg-white rounded-full p-1 shadow-sm';
+                    div.innerHTML = getShapeSVG(shape, true);
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        function renderCollected() {
+            const container = document.getElementById('collectedBeads');
+            if (collectedSequence.length === 0) {
+                container.innerHTML = '<span class="text-gray-400 text-sm italic">ยังไม่มีลูกปัด</span>';
+                return;
+            }
+            container.innerHTML = '';
+            collectedSequence.forEach(shape => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-center bg-white rounded-full p-1 shadow-sm border border-gray-100';
+                div.innerHTML = getShapeSVG(shape, true);
+                container.appendChild(div);
+            });
+        }
+
+        function resetBoard() {
+            currentPos = { ...startPos };
+            visitedCells.clear();
+            visitedCells.add(`${startPos.x},${startPos.y}`);
+            collectedSequence = [];
+            executionHalted = false;
+            renderBoard();
+            renderTargetPattern();
+            renderCollected();
+        }
+
+        function switchTab(tabNum) {
+            if (isExecuting) return;
+            currentTab = tabNum;
+            
+            document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx + 1 === tabNum);
+            });
+
+            const titleEl = document.getElementById('targetTitle');
+            const descEl = document.getElementById('targetDesc');
+            
+            if (tabNum === 1) {
+                titleEl.textContent = "กำไลที่มาลีต้องการ (เล่นเอง)";
+                descEl.textContent = "ใช้ปุ่มควบคุมเดินไปเก็บลูกปัดตามลำดับ ระวังอย่าเดินทับเส้นทางเดิม";
+                renderManualControls();
+            } else if (tabNum === 2) {
+                titleEl.textContent = "เขียนโค้ดช่วยมาลี (ใบงาน 1.2)";
+                descEl.textContent = "เขียนคำสั่งร้อยลูกปัดให้ได้รูปแบบเดียวกับที่มาลีต้องการ";
+                userProgram = []; 
+                renderCodingControls();
+            } else if (tabNum === 3) {
+                titleEl.textContent = "สร้างกำไลของคุณเอง (ใบงาน 2)";
+                descEl.textContent = "จับคู่กับเพื่อน เขียนโปรแกรมร้อยลูกปัดอะไรก็ได้ให้ครบ 5 เม็ด";
+                userProgram = []; 
+                renderCodingControls();
+            } else if (tabNum === 4) {
+                titleEl.textContent = "กำไลที่ต้นกล้าต้องการ (แก้บั๊ก)";
+                descEl.textContent = "ผังงานของต้นกล้ามีข้อผิดพลาด ช่วยแก้โค้ดด้านขวาให้ถูกต้องที!";
+                userProgram = JSON.parse(JSON.stringify(tonklaCode)); 
+                renderCodingControls(true);
+            }
+
+            resetBoard();
+        }
+
+        function renderManualControls() {
+            const panel = document.getElementById('panelArea');
+            panel.innerHTML = `
+                <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-200 text-sm mb-2 text-center">
+                    <span class="font-bold text-yellow-700">คำเตือน:</span> ห้ามเดินทับเส้นทางเดิม!
+                </div>
+                <div class="manual-controls">
+                    <div></div>
+                    <button class="d-pad-btn" onclick="manualMove('up')">⬆️</button>
+                    <div></div>
+                    <button class="d-pad-btn" onclick="manualMove('left')">⬅️</button>
+                    <button class="d-pad-btn" onclick="manualMove('down')">⬇️</button>
+                    <button class="d-pad-btn" onclick="manualMove('right')">➡️</button>
+                    <button class="action-btn mt-2" onclick="manualCollect()">🧵 ร้อยลูกปัดปัจจุบัน</button>
+                </div>
+                <div class="mt-4 text-center">
+                     <button onclick="resetBoard()" class="text-red-500 underline text-sm">เริ่มใหม่</button>
+                </div>
+            `;
+        }
+
+        function renderCodingControls(isDebugMode = false) {
+            const panel = document.getElementById('panelArea');
+            let infoBox = isDebugMode 
+                ? `<div class="bg-yellow-50 p-3 rounded-xl border border-yellow-200 text-sm"><span class="font-bold text-yellow-700">ภารกิจ:</span> ลบคำสั่งที่ผิดออก (กดกากบาท) และเพิ่มคำสั่งใหม่ให้ถูกต้อง</div>`
+                : `<div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm"><span class="font-bold text-blue-700">เครื่องมือ:</span> กดปุ่มด้านล่างเพื่อต่อบล็อกคำสั่ง</div>`;
+
+            panel.innerHTML = `
+                ${infoBox}
+                <div class="palette">
+                    <button class="cmd-btn" onclick="addCmd('move', 'up')">⬆️ บน</button>
+                    <button class="cmd-btn" onclick="addCmd('move', 'down')">⬇️ ล่าง</button>
+                    <button class="cmd-btn" onclick="addCmd('move', 'left')">⬅️ ซ้าย</button>
+                    <button class="cmd-btn" onclick="addCmd('move', 'right')">➡️ ขวา</button>
+                    <div class="w-full h-px bg-gray-200 my-1 col-span-2"></div>
+                    <button class="cmd-btn" onclick="addCmd('collect', '${SHAPES.TRIANGLE}')">${getShapeSVG(SHAPES.TRIANGLE, true)} ร้อย</button>
+                    <button class="cmd-btn" onclick="addCmd('collect', '${SHAPES.HEXAGON}')">${getShapeSVG(SHAPES.HEXAGON, true)} ร้อย</button>
+                    <button class="cmd-btn" onclick="addCmd('collect', '${SHAPES.CIRCLE}')">${getShapeSVG(SHAPES.CIRCLE, true)} ร้อย</button>
+                    <button class="cmd-btn" onclick="addCmd('collect', '${SHAPES.PENTAGON}')">${getShapeSVG(SHAPES.PENTAGON, true)} ร้อย</button>
+                    <button class="cmd-btn" onclick="addCmd('collect', '${SHAPES.SQUARE}')">${getShapeSVG(SHAPES.SQUARE, true)} ร้อย</button>
+                </div>
+                
+                <div class="flex justify-between items-end mt-2 border-t pt-2">
+                    <div class="font-semibold text-gray-700 text-sm">โปรแกรมของคุณ:</div>
+                    <div class="view-toggle mb-0">
+                        <button class="toggle-btn ${currentViewMode === 'pseudo' ? 'active' : ''}" onclick="toggleViewMode('pseudo')">รหัสลำลอง</button>
+                        <button class="toggle-btn ${currentViewMode === 'flowchart' ? 'active' : ''}" onclick="toggleViewMode('flowchart')">ผังงาน</button>
+                    </div>
+                </div>
+                
+                <div class="program-list" id="programList"></div>
+                
+                <div class="flex gap-2 mt-2">
+                    <button onclick="runProgram()" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-xl transition-colors shadow-md">
+                        ▶️ รันโค้ด
+                    </button>
+                    <button onclick="clearProgram()" class="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-xl font-bold transition-colors">
+                        ล้าง
+                    </button>
+                </div>
+            `;
+            renderProgramList();
+        }
+
+        function toggleViewMode(mode) {
+            if (isExecuting) return;
+            currentViewMode = mode;
+            // The active class will be re-rendered in renderCodingControls if called from there, 
+            // but we update it here for immediate feedback if panel isn't fully re-rendered.
+            const btns = document.querySelectorAll('.toggle-btn');
+            if(btns.length > 0) {
+                btns[0].classList.toggle('active', mode === 'pseudo');
+                btns[1].classList.toggle('active', mode === 'flowchart');
+            }
+            renderProgramList();
+        }
+
+        function addCmd(type, val) {
+            if (isExecuting) return;
+            if (type === 'move') {
+                const textMap = { up: 'เดินขึ้น', down: 'เดินลง', left: 'เดินซ้าย', right: 'เดินขวา' };
+                userProgram.push({ type: 'move', dir: val, text: textMap[val] });
+            } else {
+                userProgram.push({ type: 'collect', shape: val, text: 'ร้อยลูกปัด' });
+            }
+            renderProgramList();
+        }
+
+        function removeCmd(index) {
+            if (isExecuting) return;
+            userProgram.splice(index, 1);
+            renderProgramList();
+        }
+
+        function clearProgram() {
+            if (isExecuting) return;
+            userProgram = [];
+            renderProgramList();
+            resetBoard();
+        }
+
+        function renderProgramList() {
+            const list = document.getElementById('programList');
+            if(!list) return;
+            list.innerHTML = '';
+            
+            if (userProgram.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 text-sm mt-10">ยังไม่มีคำสั่ง<br>กดปุ่มด้านบนเพื่อเพิ่มคำสั่ง</div>';
+                return;
+            }
+
+            if (currentViewMode === 'pseudo') {
+                userProgram.forEach((cmd, i) => {
+                    const item = document.createElement('div');
+                    item.className = 'program-line';
+                    let numSpan = `<span class="text-gray-400 text-xs w-5">${i+1}.</span>`;
+                    let content = cmd.type === 'move' ? `<span>${cmd.text}</span>` : `<span class="flex items-center gap-2">${cmd.text} ${getShapeSVG(cmd.shape, true)}</span>`;
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2">${numSpan} ${content}</div>
+                        <span class="del-btn" onclick="removeCmd(${i})">✕</span>
+                    `;
+                    list.appendChild(item);
+                });
+            } else {
+                const container = document.createElement('div');
+                container.className = 'flowchart-container';
+                container.innerHTML += `<div class="flow-node start-end">เริ่มต้น</div>`;
+                
+                userProgram.forEach((cmd, i) => {
+                    container.innerHTML += `<div class="flow-arrow"></div>`;
+                    const node = document.createElement('div');
+                    node.className = 'flow-node process';
+                    let content = cmd.type === 'move' ? cmd.text : `<div class="flex items-center justify-center gap-1">${cmd.text} ${getShapeSVG(cmd.shape, true)}</div>`;
+                    node.innerHTML = `${content}<span class="flow-del-btn" onclick="removeCmd(${i})">✕</span>`;
+                    container.appendChild(node);
+                });
+                
+                container.innerHTML += `<div class="flow-arrow"></div><div class="flow-node start-end">จบ</div>`;
+                list.appendChild(container);
+            }
+        }
+
+        function checkManualWin() {
+            let targetSeq = targets[currentTab];
+            if (collectedSequence.length === targetSeq.length) {
+                showModal("🎉 ไชโย! สำเร็จแล้ว", "ร้อยกำไลได้ตรงตามเป้าหมายเป๊ะเลย เก่งมากๆ!", true);
+            }
+        }
+
+        function manualMove(dir) {
+            if (isExecuting) return;
+            
+            const cell = document.getElementById(`cell-${currentPos.x}-${currentPos.y}`);
+            const currentShape = mapLayout[currentPos.y][currentPos.x];
+            
+            // Check if leaving a bead without collecting
+            if (currentShape && collectedSequence.length < targets[currentTab].length) {
+                // If it's the shape we need next
+                let nextRequired = targets[currentTab][collectedSequence.length];
+                if (currentShape === nextRequired) {
+                     showModal("❌ ลืมร้อยลูกปัด", "เจอลูกปัดที่ต้องการแล้ว ต้องกด 'ร้อยลูกปัด' ก่อนเดินต่อนะ!", false);
+                     return;
+                }
+            }
+
+            let newX = currentPos.x;
+            let newY = currentPos.y;
+
+            if (dir === 'up') newY--;
+            if (dir === 'down') newY++;
+            if (dir === 'left') newX--;
+            if (dir === 'right') newX++;
+
+            if (newX < 0 || newX >= BOARD_SIZE || newY < 0 || newY >= BOARD_SIZE) {
+                showModal("💥 ระวังชนกำแพง!", "หุ่นยนต์เดินทะลุกำแพงไม่ได้นะ", false);
+                return;
+            }
+
+            if (visitedCells.has(`${newX},${newY}`)) {
+                showModal("❌ ผิดกติกา", "เดินทับเส้นทางเดิมไม่ได้นะ ลองหาทางอื่นดู", false);
+                return;
+            }
+
+            currentPos = { x: newX, y: newY };
+            visitedCells.add(`${newX},${newY}`);
+            renderBoard();
+        }
+
+        function manualCollect() {
+            if (isExecuting) return;
+            const currentShape = mapLayout[currentPos.y][currentPos.x];
+            
+            if (!currentShape) {
+                showModal("❌ ตรงนี้ไม่มีลูกปัด", "ต้องยืนอยู่บนช่องที่มีลูกปัดถึงจะร้อยได้นะ", false);
+                return;
+            }
+
+            let targetSeq = targets[currentTab];
+            let requiredShape = targetSeq[collectedSequence.length];
+
+            if (currentShape !== requiredShape) {
+                showModal("❌ ผิดรูป!", `ลูกปัดชิ้นนี้ไม่ใช่ลำดับถัดไปของกำไลนะ (ต้องการ: ${getShapeName(requiredShape)})`, false);
+                return;
+            }
+
+            collectedSequence.push(currentShape);
+            renderCollected();
+            checkManualWin();
+        }
+
+        function getShapeName(shape) {
+            const names = { triangle:'สามเหลี่ยม', hexagon:'หกเหลี่ยม', circle:'วงกลม', pentagon:'ห้าเหลี่ยม', square:'สี่เหลี่ยม' };
+            return names[shape] || shape;
+        }
+
+        async function runProgram() {
+            if (isExecuting || userProgram.length === 0) return;
+            isExecuting = true;
+            resetBoard();
+            
+            const listContainer = document.getElementById('programList');
+            
+            const getLineElements = (index) => {
+                let els = [];
+                if (currentViewMode === 'pseudo') {
+                    if (listContainer.children[index]) els.push(listContainer.children[index]);
+                } else if (currentViewMode === 'flowchart') {
+                    const fcContainer = listContainer.querySelector('.flowchart-container');
+                    if (fcContainer && fcContainer.children[(index * 2) + 2]) {
+                        els.push(fcContainer.children[(index * 2) + 2]); 
+                    }
+                }
+                return els;
+            };
+
+            let mustCollectShape = null; 
+
+            for (let i = 0; i < userProgram.length; i++) {
+                if (executionHalted) break;
+                
+                // Remove highlights
+                if (currentViewMode === 'pseudo') {
+                     Array.from(listContainer.children).forEach(c => c.classList.remove('running', 'error'));
+                } else {
+                     const fc = listContainer.querySelector('.flowchart-container');
+                     if(fc) Array.from(fc.children).forEach(c => c.classList.remove('running', 'error'));
+                }
+                
+                const currentEls = getLineElements(i);
+                currentEls.forEach(el => { if(el) el.classList.add('running'); });
+                
+                const cmd = userProgram[i];
+                await new Promise(r => setTimeout(r, 600)); // Animation delay
+
+                if (cmd.type === 'move') {
+                    if (mustCollectShape) {
+                        haltExecution(currentEls, "ลืมร้อยลูกปัด! (กติกา: เจอแล้วต้องร้อยทันที)");
+                        break;
+                    }
+
+                    let newX = currentPos.x;
+                    let newY = currentPos.y;
+                    if (cmd.dir === 'up') newY--;
+                    if (cmd.dir === 'down') newY++;
+                    if (cmd.dir === 'left') newX--;
+                    if (cmd.dir === 'right') newX++;
+
+                    if (newX < 0 || newX >= BOARD_SIZE || newY < 0 || newY >= BOARD_SIZE) {
+                        haltExecution(currentEls, "ชนกำแพง! หุ่นยนต์ออกนอกตาราง");
+                        break;
+                    }
+                    if (visitedCells.has(`${newX},${newY}`)) {
+                        haltExecution(currentEls, "เดินทับเส้นทางเดิม! ผิดกติกา");
+                        break;
+                    }
+
+                    currentPos = { x: newX, y: newY };
+                    visitedCells.add(`${newX},${newY}`);
+                    
+                    const steppedShape = mapLayout[currentPos.y][currentPos.x];
+                    if (steppedShape) mustCollectShape = steppedShape;
+                    
+                    renderBoard();
+
+                } else if (cmd.type === 'collect') {
+                    const currentShape = mapLayout[currentPos.y][currentPos.x];
+                    
+                    if (!currentShape) {
+                        haltExecution(currentEls, "ตรงนี้ไม่มีลูกปัดให้ร้อยนะ!");
+                        break;
+                    }
+                    if (currentShape !== cmd.shape) {
+                        haltExecution(currentEls, `ผิดรูป! ช่องนี้เป็นลูกปัดอีกแบบ ไม่ใช่ลูกปัดที่สั่งให้ร้อย`);
+                        break;
+                    }
+                    
+                    let targetSeq = targets[currentTab];
+                    if (currentTab !== 3 && targetSeq[collectedSequence.length] !== cmd.shape) {
+                        haltExecution(currentEls, "ร้อยลูกปัดถูกรูป แต่อยู่ผิดลำดับของกำไลเป้าหมายนะ!");
+                        break;
+                    }
+
+                    collectedSequence.push(currentShape);
+                    mustCollectShape = null;
+                    renderCollected();
+                }
+            }
+
+            // Post-execution checks
+            if (!executionHalted) {
+                // Remove highlight from last line
+                if (currentViewMode === 'pseudo') {
+                     Array.from(listContainer.children).forEach(c => c.classList.remove('running'));
+                } else {
+                     const fc = listContainer.querySelector('.flowchart-container');
+                     if(fc) Array.from(fc.children).forEach(c => c.classList.remove('running'));
+                }
+                
+                if (mustCollectShape) {
+                    showModal("⚠️ ยังไม่เสร็จสมบูรณ์", "เดินไปทับลูกปัดสุดท้าย แต่โปรแกรมจบก่อนที่จะ 'ร้อยลูกปัด' !", false);
+                } else if (currentTab === 3) {
+                    if (collectedSequence.length === 5) showModal("🎉 ยอดเยี่ยม!", "เธอเขียนโปรแกรมสร้างกำไล 5 เม็ดได้สำเร็จ!", true);
+                    else showModal("🤔 ยังไม่ครบ", `โปรแกรมจบแล้ว แต่ร้อยลูกปัดได้แค่ ${collectedSequence.length} เม็ด (ต้องการ 5 เม็ด)`, false);
+                } else {
+                    let targetSeq = targets[currentTab];
+                    if (collectedSequence.length === targetSeq.length) {
+                        showModal("🎉 ไชโย! สำเร็จแล้ว", currentTab === 4 ? "เก่งมาก! เธอช่วยต้นกล้าแก้บั๊กจนร้อยกำไลได้สำเร็จ!" : "ร้อยกำไลได้ตรงตามเป้าหมายเลย!", true);
+                    } else {
+                        showModal("🤔 โปรแกรมจบก่อน", "หุ่นยนต์หยุดทำงานแล้ว แต่กำไลยังร้อยไม่เสร็จเลย ลองเพิ่มคำสั่งดูนะ", false);
+                    }
+                }
+            }
+            
+            isExecuting = false;
+        }
+
+        function haltExecution(lineEls, errorMsg) {
+            executionHalted = true;
+            if(lineEls && lineEls.length > 0) lineEls.forEach(el => el.classList.add('error'));
+            const cell = document.getElementById(`cell-${currentPos.x}-${currentPos.y}`);
+            if(cell) cell.classList.add('error');
+            showModal("❌ พบข้อผิดพลาด (Bug)", errorMsg, false);
+        }
+
+        function showModal(title, msg, success) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalTitle').className = `text-2xl font-bold mb-4 ${success ? 'text-green-600' : 'text-red-600'}`;
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('resultModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').style.display = 'none';
+            if (currentTab === 1) resetBoard(); 
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (currentTab !== 1 || isExecuting) return;
+            switch(e.key) {
+                case 'ArrowUp': manualMove('up'); break;
+                case 'ArrowDown': manualMove('down'); break;
+                case 'ArrowLeft': manualMove('left'); break;
+                case 'ArrowRight': manualMove('right'); break;
+                case ' ': case 'Enter': manualCollect(); break;
+            }
+        });
+
+        // Start app
+        init();
+    </script>
+</body>
+</html>
