@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เกมร้อยลูกปัดหรรษา</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f0fdf4; margin: 0; padding: 10px; min-height: 100vh;}
         
@@ -64,7 +65,7 @@
         .action-btn { background: #10b981; color: white; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #059669; grid-column: span 3;}
         .action-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #059669; }
 
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 400px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); animation: slideUp 0.3s ease-out;}
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0;} to { transform: translateY(0); opacity: 1;} }
     </style>
@@ -115,7 +116,56 @@
         <div class="modal-content">
             <h2 class="text-2xl font-bold mb-4" id="modalTitle">ผลลัพธ์</h2>
             <p class="text-gray-600 mb-6" id="modalMessage">รายละเอียด</p>
-            <button onclick="closeModal()" class="bg-blue-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-600 w-full">ตกลง</button>
+            <button onclick="closeModal()" class="bg-blue-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-600 w-full shadow-md active:scale-95 transition-transform">ตกลง</button>
+        </div>
+    </div>
+
+    <div class="modal" id="certificateModal" style="z-index: 200;">
+        <div class="flex flex-col items-center w-full px-4">
+            <!-- This card is what gets captured by html2canvas -->
+            <div id="certificateCard" class="bg-white rounded-3xl p-6 md:p-8 text-center relative overflow-hidden w-full max-w-lg mb-4" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 8px solid #fef08a;">
+                
+                <!-- Background decoration -->
+                <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-green-100 to-transparent"></div>
+                
+                <div class="relative z-10">
+                    <div class="text-5xl mb-4">🏆</div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-green-700 mb-2">ยินดีด้วย! ทำสำเร็จแล้ว</h2>
+                    <div class="text-md md:text-lg font-semibold text-blue-600 mb-4 bg-blue-50 py-2 px-4 rounded-xl inline-block border border-blue-200 shadow-sm" id="certActivityName">ชื่อกิจกรรม</div>
+                    
+                    <div class="mb-4 text-left bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">🎓 ชื่อ-สกุล นักเรียน:</label>
+                        <input type="text" id="studentName" placeholder="พิมพ์ชื่อของนักเรียนที่นี่..." class="w-full p-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 font-bold text-center text-lg text-blue-800 bg-white transition-colors">
+                    </div>
+
+                    <div class="mb-4">
+                        <p class="text-sm font-bold text-gray-600 mb-2">ผลงานกำไลที่ร้อยสำเร็จ:</p>
+                        <div class="flex items-center justify-center gap-2 flex-wrap min-h-[60px] bg-white p-3 rounded-xl border border-gray-100 shadow-inner" id="certCollectedBeads">
+                            <!-- Beads injected here -->
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-6 border-t pt-4">
+                        <div class="text-left">
+                            <div class="font-bold text-gray-800 text-sm">เกมร้อยลูกปัดหรรษา</div>
+                            <div class="text-xs text-gray-500" id="certDate">วันที่...</div>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center border-2 border-yellow-400 text-2xl">
+                            ⭐
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls outside the card so they aren't in the screenshot -->
+            <div class="flex gap-4 w-full max-w-lg justify-center">
+                <button id="captureBtn" onclick="takeScreenshot()" class="flex-1 bg-green-500 text-white px-4 py-3 rounded-xl font-bold hover:bg-green-600 shadow-lg flex items-center justify-center gap-2 text-lg transition-transform active:scale-95 border-b-4 border-green-700">
+                    <span>📷 ถ่ายรูปส่งครู</span>
+                </button>
+                <button id="certCloseBtn" onclick="closeCertModal()" class="flex-1 bg-white text-gray-700 px-4 py-3 rounded-xl font-bold hover:bg-gray-100 shadow-lg border border-gray-200 transition-transform active:scale-95 border-b-4 border-gray-300">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
         </div>
     </div>
 
@@ -374,8 +424,6 @@
         function toggleViewMode(mode) {
             if (isExecuting) return;
             currentViewMode = mode;
-            // The active class will be re-rendered in renderCodingControls if called from there, 
-            // but we update it here for immediate feedback if panel isn't fully re-rendered.
             const btns = document.querySelectorAll('.toggle-btn');
             if(btns.length > 0) {
                 btns[0].classList.toggle('active', mode === 'pseudo');
@@ -453,7 +501,8 @@
         function checkManualWin() {
             let targetSeq = targets[currentTab];
             if (collectedSequence.length === targetSeq.length) {
-                showModal("🎉 ไชโย! สำเร็จแล้ว", "ร้อยกำไลได้ตรงตามเป้าหมายเป๊ะเลย เก่งมากๆ!", true);
+                // Call the new certificate function on manual mode success
+                showSuccessAndCertificate("กิจกรรม 1.1 - ควบคุมหุ่นยนต์ด้วยตนเอง");
             }
         }
 
@@ -463,9 +512,7 @@
             const cell = document.getElementById(`cell-${currentPos.x}-${currentPos.y}`);
             const currentShape = mapLayout[currentPos.y][currentPos.x];
             
-            // Check if leaving a bead without collecting
             if (currentShape && collectedSequence.length < targets[currentTab].length) {
-                // If it's the shape we need next
                 let nextRequired = targets[currentTab][collectedSequence.length];
                 if (currentShape === nextRequired) {
                      showModal("❌ ลืมร้อยลูกปัด", "เจอลูกปัดที่ต้องการแล้ว ต้องกด 'ร้อยลูกปัด' ก่อนเดินต่อนะ!", false);
@@ -616,9 +663,7 @@
                 }
             }
 
-            // Post-execution checks
             if (!executionHalted) {
-                // Remove highlight from last line
                 if (currentViewMode === 'pseudo') {
                      Array.from(listContainer.children).forEach(c => c.classList.remove('running'));
                 } else {
@@ -629,12 +674,19 @@
                 if (mustCollectShape) {
                     showModal("⚠️ ยังไม่เสร็จสมบูรณ์", "เดินไปทับลูกปัดสุดท้าย แต่โปรแกรมจบก่อนที่จะ 'ร้อยลูกปัด' !", false);
                 } else if (currentTab === 3) {
-                    if (collectedSequence.length === 5) showModal("🎉 ยอดเยี่ยม!", "เธอเขียนโปรแกรมสร้างกำไล 5 เม็ดได้สำเร็จ!", true);
-                    else showModal("🤔 ยังไม่ครบ", `โปรแกรมจบแล้ว แต่ร้อยลูกปัดได้แค่ ${collectedSequence.length} เม็ด (ต้องการ 5 เม็ด)`, false);
+                    if (collectedSequence.length === 5) {
+                        showSuccessAndCertificate("กิจกรรม 2 - สร้างสรรค์กำไลอิสระ");
+                    } else {
+                        showModal("🤔 ยังไม่ครบ", `โปรแกรมจบแล้ว แต่ร้อยลูกปัดได้แค่ ${collectedSequence.length} เม็ด (ต้องการ 5 เม็ด)`, false);
+                    }
                 } else {
                     let targetSeq = targets[currentTab];
                     if (collectedSequence.length === targetSeq.length) {
-                        showModal("🎉 ไชโย! สำเร็จแล้ว", currentTab === 4 ? "เก่งมาก! เธอช่วยต้นกล้าแก้บั๊กจนร้อยกำไลได้สำเร็จ!" : "ร้อยกำไลได้ตรงตามเป้าหมายเลย!", true);
+                        if (currentTab === 4) {
+                            showSuccessAndCertificate("ภารกิจพิเศษ - ช่วยต้นกล้าแก้บั๊ก");
+                        } else {
+                            showSuccessAndCertificate("กิจกรรม 1.2 - เขียนโค้ดร้อยลูกปัดตามแบบ");
+                        }
                     } else {
                         showModal("🤔 โปรแกรมจบก่อน", "หุ่นยนต์หยุดทำงานแล้ว แต่กำไลยังร้อยไม่เสร็จเลย ลองเพิ่มคำสั่งดูนะ", false);
                     }
@@ -662,6 +714,81 @@
         function closeModal() {
             document.getElementById('resultModal').style.display = 'none';
             if (currentTab === 1) resetBoard(); 
+        }
+
+        // New function to show Certificate Modal
+        function showSuccessAndCertificate(activityName) {
+            document.getElementById('certActivityName').textContent = activityName;
+            
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('certDate').textContent = `วันที่ ${dateStr} เวลา ${timeStr} น.`;
+            
+            // Render collected beads larger for the certificate
+            const certBeads = document.getElementById('certCollectedBeads');
+            certBeads.innerHTML = '';
+            collectedSequence.forEach(shape => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-center bg-white rounded-full p-2 shadow-sm border border-gray-200';
+                div.innerHTML = getShapeSVG(shape, false); // false = use normal/larger size
+                certBeads.appendChild(div);
+            });
+
+            document.getElementById('certificateModal').style.display = 'flex';
+        }
+
+        function closeCertModal() {
+            document.getElementById('certificateModal').style.display = 'none';
+            if (currentTab === 1) resetBoard(); 
+        }
+
+        // Function to take screenshot and download using html2canvas
+        function takeScreenshot() {
+            const card = document.getElementById('certificateCard');
+            const btn = document.getElementById('captureBtn');
+            const closeBtn = document.getElementById('certCloseBtn');
+            const originalText = btn.innerHTML;
+            
+            // Blur input to prevent capturing the blinking cursor or blue focus outline
+            document.getElementById('studentName').blur();
+            
+            // Give UI feedback while processing
+            btn.innerHTML = '⏳ กำลังเตรียมรูปภาพ...';
+            btn.disabled = true;
+            closeBtn.style.opacity = '0.5';
+            closeBtn.disabled = true;
+
+            // Small delay to ensure blur effect is applied before capturing
+            setTimeout(() => {
+                html2canvas(card, {
+                    scale: 2, // High resolution
+                    backgroundColor: '#ffffff',
+                    useCORS: true
+                }).then(canvas => {
+                    // Restore buttons
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    closeBtn.style.opacity = '1';
+                    closeBtn.disabled = false;
+                    
+                    // Create and trigger download link
+                    const link = document.createElement('a');
+                    const studentName = document.getElementById('studentName').value.trim() || 'นักเรียน';
+                    link.download = `ผลงานเกมร้อยลูกปัด_${studentName}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }).catch(err => {
+                    console.error("Error generating screenshot: ", err);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    closeBtn.style.opacity = '1';
+                    closeBtn.disabled = false;
+                    
+                    closeCertModal();
+                    showModal("❌ เกิดข้อผิดพลาด", "ไม่สามารถบันทึกรูปภาพได้อัตโนมัติ กรุณาใช้ฟังก์ชันแคปหน้าจอ (Screenshot) ของเครื่องแทนนะครับ", false);
+                });
+            }, 200);
         }
 
         window.addEventListener('keydown', (e) => {
